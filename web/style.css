@@ -1,0 +1,25 @@
+.jb { display: grid; gap: var(--space-2); max-width: 1100px; }
+.jb-bar { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-2); }
+.jb-bar .chip.on { background: var(--accent); color: var(--foreground); border-color: var(--input); }
+.jb-q { margin-left: auto; min-width: 200px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--foreground); font: inherit; }
+.jb-count { color: var(--muted-foreground); font-size: var(--text-xs); }
+.jb-row { display: grid; grid-template-columns: 1fr auto; gap: 4px var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.jb-head { min-width: 0; display: flex; gap: var(--space-2); align-items: baseline; }
+.jb-key { font-family: var(--font-mono); font-weight: 600; color: var(--primary); white-space: nowrap; text-decoration: none; }
+.jb-key:hover { text-decoration: underline; }
+.jb-sum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jb-chips { display: flex; gap: 6px; justify-content: flex-end; }
+.jb-chip { font-size: var(--text-xs); padding: 1px 8px; border-radius: 9999px; border: 1px solid var(--border); white-space: nowrap; color: var(--muted-foreground); }
+.jira-indeterminate { color: var(--primary); border-color: var(--primary); }
+.jira-done { color: var(--success); border-color: var(--success); }
+.jira-new { color: var(--muted-foreground); }
+.hub-work { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
+.hub-wait { color: var(--primary-foreground); background: var(--warning); border-color: var(--warning); }
+.hub-done { color: var(--success); border-color: var(--success); }
+.jb-who { display: flex; gap: 6px; flex-wrap: wrap; }
+.jb-agent { font: inherit; font-size: var(--text-xs); padding: 1px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--muted); color: var(--foreground); cursor: pointer; }
+.jb-agent.on { border-color: var(--primary); }
+.jb-agent:hover { border-color: var(--input); }
+.jb-meta { color: var(--muted-foreground); font-size: var(--text-xs); text-align: right; white-space: nowrap; }
+.jb-chip.go { font: inherit; font-size: var(--text-xs); cursor: pointer; }
+.jb-chip.go:hover { filter: brightness(1.15); text-decoration: underline; }
