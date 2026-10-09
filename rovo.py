@@ -3,6 +3,7 @@
 Только чтение: поиск задач по JQL и чтение задачи."""
 import json
 import os
+import signal
 import subprocess
 import threading
 import queue
@@ -22,8 +23,10 @@ def server(cfg):
 class Rovo:
     def __init__(self, cfg, timeout=60):
         cmd, env = server(cfg)
+        # свой process group: npx поднимает mcp-remote отдельным процессом (node) — закрыть надо всю группу, иначе он
+        # переживает закрытие npx и остаётся сиротой
         self.p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                  text=True, env={**os.environ, **env})
+                                  text=True, env={**os.environ, **env}, start_new_session=True)
         self.q, self.n, self.timeout = queue.Queue(), 0, timeout
         threading.Thread(target=self._read, daemon=True).start()
         self.call_raw("initialize", {"protocolVersion": "2025-06-18", "capabilities": {},
@@ -59,4 +62,11 @@ class Rovo:
         return json.loads(text)
 
     def close(self):
-        self.p.kill()
+        try:
+            os.killpg(self.p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        try:
+            self.p.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
