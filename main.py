@@ -127,6 +127,15 @@ def jira(keys, cloud, moved, cfg):
                 continue   # нет такой задачи — случайное совпадение номера
             moved[k] = it["key"]
             out[it["key"]] = issue(it)
+        # чьи: только задачи владельца (владелец 10.10, q71817: «только мои задачи») — тот же поиск с assignee =
+        # currentUser(): вход в Atlassian — его
+        found = sorted(out)
+        for i in range(0, len(found), 100):
+            res = r.tool("searchJiraIssuesUsingJql", {"cloudId": cloud, "jql": "key in (%s) AND assignee = currentUser()"
+                                                      % ",".join(found[i:i + 100]), "fields": ["summary"], "maxResults": 100})
+            for it in res.get("issues") or []:
+                if it["key"] in out:
+                    out[it["key"]]["mine"] = True
         for k, new in moved.items():
             if k in keys and new in out and k != new:
                 out[k] = {**out[new], "moved_to": new}
@@ -136,6 +145,12 @@ def jira(keys, cloud, moved, cfg):
     finally:
         if r:
             r.close()
+
+
+def only_mine(issues, keys):
+    """На доске — только задачи владельца (исполнитель в Jira — он). Jira ещё не ответила — пусто, а не все подряд."""
+    mine = {k: v for k, v in issues.items() if v.get("mine")}
+    return {"issues": mine, "keys": {k: v for k, v in keys.items() if k in mine}}
 
 
 def cloud_id(url):
@@ -168,7 +183,7 @@ def main():
             if got is not None:
                 issues = got
         write(OUT, {"generated": time.time(), "url": url, "jira_at": jira_at, "jira_error": err,
-                    "issues": issues, "keys": idx["keys"]}, fixed=True)
+                    **only_mine(issues, idx["keys"])}, fixed=True)
         time.sleep(EVERY)
 
 
