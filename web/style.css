@@ -1,25 +1,45 @@
 .jb { display: grid; gap: var(--space-2); max-width: 1100px; }
 .jb-bar { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-2); }
-.jb-bar .chip.on { background: var(--accent); color: var(--foreground); border-color: var(--input); }
-.jb-q { margin-left: auto; min-width: 200px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--foreground); font: inherit; }
+.jb-bar .chip { height: 28px; padding: 0 12px; border-radius: 9999px; display: inline-flex; align-items: center; }
+.jb-bar .chip.on { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+.jb-find { margin-left: auto; position: relative; display: block; }
+.jb-find svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted-foreground); pointer-events: none; }
+.jb-q { width: 220px; height: 28px; padding: 0 10px 0 28px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); color: var(--foreground); font: inherit; font-size: var(--text-sm, inherit); }
+.jb-q:focus { outline: none; border-color: var(--ring, var(--primary)); }
 .jb-count { color: var(--muted-foreground); font-size: var(--text-xs); }
-.jb-row { display: grid; grid-template-columns: 1fr auto; gap: 4px var(--space-3); padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
-.jb-head { min-width: 0; display: flex; gap: var(--space-2); align-items: baseline; }
-.jb-key { font-family: var(--font-mono); font-weight: 600; color: var(--primary); white-space: nowrap; text-decoration: none; }
+
+/* список — общая сетка: колонки ключа и группы бейджей по max-content, у всех строк одни; строка берёт их через subgrid */
+.jb-list { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; column-gap: var(--space-2); row-gap: 6px; }
+.jb-row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; row-gap: 4px;
+  align-items: center; padding: 8px var(--space-3); border: 1px solid var(--border); border-radius: var(--radius); background: var(--card); }
+.jb-row:hover { border-color: var(--input); }
+.jb-key { font-family: var(--font-mono); font-weight: 600; font-size: var(--text-sm, inherit); color: var(--primary); white-space: nowrap; text-decoration: none; padding-right: var(--space-2); }
 .jb-key:hover { text-decoration: underline; }
 .jb-sum { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.jb-chips { display: flex; gap: 6px; justify-content: flex-end; }
-.jb-chip { font-size: var(--text-xs); padding: 1px 8px; border-radius: 9999px; border: 1px solid var(--border); white-space: nowrap; color: var(--muted-foreground); }
-.jira-indeterminate { color: var(--primary); border-color: var(--primary); }
-.jira-done { color: var(--success); border-color: var(--success); }
-.jira-new { color: var(--muted-foreground); }
-.hub-work { color: var(--primary-foreground); background: var(--primary); border-color: var(--primary); }
-.hub-wait { color: var(--primary-foreground); background: var(--warning); border-color: var(--warning); }
-.hub-done { color: var(--success); border-color: var(--success); }
-.jb-who { display: flex; gap: 6px; flex-wrap: wrap; }
-.jb-agent { font: inherit; font-size: var(--text-xs); padding: 1px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--muted); color: var(--foreground); cursor: pointer; }
+.jb-who { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; min-height: 0; }
+.jb-who:empty { display: none; }
+.jb-meta { grid-column: 3; grid-row: 2; justify-self: end; color: var(--muted-foreground); font-size: var(--text-xs); white-space: nowrap; }
+
+/* цвета статусов Jira: оттенки далеко по кругу (синий / пурпурно-розовый / зелёный / серый), текст ≥ 4.5:1 на своей заливке в обеих темах; в токенах хаба розового нет */
+/* бейджи строки — одна группа справа: правый край общий, левый плавает; бейдж — по размеру текста, поля у всех 8px; цвет — оттенок смысла (--c): статус Jira залит, пометка хаба — контур (рамка 1px у обоих, высота не прыгает) */
+.jb-chip { --c: var(--muted-foreground); box-sizing: border-box; display: inline-flex; align-items: center;
+  height: 20px; padding: 2px 8px; border-radius: 9999px; font: inherit; font-size: 12px; font-weight: 500; line-height: 1;
+  white-space: nowrap; color: var(--c);
+  background: color-mix(in srgb, var(--c) 16%, transparent); border: 1px solid transparent; }
+.jb-pills { grid-column: 3; display: flex; justify-content: flex-end; align-items: center; gap: 6px; }
+.jb-cap { text-box: trim-both cap alphabetic; }
+.jira-new { --c: var(--muted-foreground); }
+.jira-indeterminate { --c: light-dark(#2a3fb0, var(--primary)); }
+.jira-indeterminate.review { --c: light-dark(#b3277f, #ff9ed2); }
+.jira-done { --c: light-dark(#0f6b40, var(--success)); }
+.hub-work { --c: var(--primary); }
+.hub-wait { --c: var(--warning); }
+.hub-done { --c: var(--success); }
+.hub-quiet { --c: var(--muted-foreground); }
+.jb-chip[class*="hub-"] { background: transparent; border-color: var(--c); }
+.jb-chip.go { cursor: pointer; }
+.jb-chip.go:hover { background: color-mix(in srgb, var(--c) 14%, transparent); }
+
+.jb-agent { font: inherit; font-size: var(--text-xs); height: 20px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--muted); color: var(--foreground); cursor: pointer; }
 .jb-agent.on { border-color: var(--primary); }
 .jb-agent:hover { border-color: var(--input); }
-.jb-meta { color: var(--muted-foreground); font-size: var(--text-xs); text-align: right; white-space: nowrap; }
-.jb-chip.go { font: inherit; font-size: var(--text-xs); cursor: pointer; }
-.jb-chip.go:hover { filter: brightness(1.15); text-decoration: underline; }

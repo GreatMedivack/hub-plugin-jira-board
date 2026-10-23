@@ -2,7 +2,10 @@
 // Данные — web/data.json от процесса плагина (main.py); состояние сессий и поручений — из снимка хаба.
 const ACTIVE = new Set(["busy", "starting", "dialog"]);
 const DAY = 86400;
-let data = null, timer = null, filter = "work", query = "", draw = () => {};
+const FILTERS = ["work", "wait", "done", "all"], KEY = "jira-board:filter", QKEY = "jira-board:query";
+const recall = (key) => { try { return localStorage.getItem(key) || ""; } catch { return ""; } };
+const keep = (key, v) => { try { localStorage.setItem(key, v); } catch { /* без памяти */ } };
+let data = null, timer = null, filter = FILTERS.includes(recall(KEY)) ? recall(KEY) : "work", query = recall(QKEY), draw = () => {};
 
 async function load(hub) {
   try {
@@ -51,9 +54,16 @@ function row(hub, key, rec, snap) {
   const tr = hub.el("div", "jb-row");
   const a = hub.el("a", "jb-key", key);
   a.href = `${data.url}/browse/${key}`; a.target = "_blank"; a.rel = "noopener";
-  const head = hub.el("div", "jb-head");
-  head.append(a, hub.el("span", "jb-sum", is.summary || "—"));
-  const st = hub.el("span", `jb-chip jira-${is.category || "none"}`, is.status || "не в Jira");
+  a.className = "jb-key";
+  const sum = hub.el("span", "jb-sum", is.summary || "—");
+  sum.title = is.summary || "";
+  const review = /review|ревью/i.test(is.status || "") ? " review" : "";
+  const label = is.status || "не в Jira";
+  // у заглавных нет выносных: центр по высоте заглавных, иначе текст сидит выше центра
+  const caps = label === label.toUpperCase() && label !== label.toLowerCase() ? " caps" : "";
+  const st = hub.el("span", `jb-chip jira-${is.category || "none"}${review}${caps}`, caps ? "" : label);
+  if (caps) st.append(hub.el("span", "jb-cap", label));
+  st.title = `статус в Jira: ${is.status || "нет"}`;
   if (is.moved_to) { a.href = `${data.url}/browse/${is.moved_to}`; a.title = `теперь ${is.moved_to}`; }
   const hc = hub.el(to ? "button" : "span", `jb-chip hub-${hs}${to ? " go" : ""}`, hl);
   if (to) {
@@ -72,8 +82,9 @@ function row(hub, key, rec, snap) {
     who.append(b);
   }
   const meta = hub.el("div", "jb-meta", [is.assignee && `в Jira: ${is.assignee}`, ago(rec.last)].filter(Boolean).join(" · "));
-  tr.append(head, hub.el("div", "jb-chips"), who, meta);
-  tr.querySelector(".jb-chips").append(st, hc);
+  const pills = hub.el("div", "jb-pills");
+  pills.append(st, hc);
+  tr.append(a, sum, pills, who, meta);
   return { node: tr, hs, cat: is.category || "", inJira: !!data.issues[key], last: rec.last };
 }
 
@@ -86,14 +97,18 @@ export default function register(hub) {
     chips = [["work", "В работе"], ["wait", "Ждут вас"], ["done", "Закрытые"], ["all", "Все"]].map(([id, label]) => {
       const b = hub.el("button", "chip", label);
       b.dataset.id = id;
-      b.addEventListener("click", () => { filter = id; draw(); });
+      b.addEventListener("click", () => { filter = id; keep(KEY, id); draw(); });
       bar.append(b);
       return b;
     });
     const q = hub.el("input", "jb-q");
     q.placeholder = "Номер или слово";
-    q.addEventListener("input", () => { query = q.value; draw(); });
-    bar.append(q);
+    q.value = query;
+    q.addEventListener("input", () => { query = q.value; keep(QKEY, query); draw(); });
+    const find = hub.el("label", "jb-find");
+    find.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>');
+    find.append(q);
+    bar.append(find);
     note = hub.el("p", "hint warn"); count = hub.el("div", "jb-count"); list = hub.el("div", "jb-list");
     box.append(bar, note, count, list);
     root.replaceChildren(box);
