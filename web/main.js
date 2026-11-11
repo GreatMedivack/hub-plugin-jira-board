@@ -45,6 +45,55 @@ function hubState(key, rec, snap, cat) {
 
 const working = (s, m) => ACTIVE.has(s.state) && m.last >= (s.since || 0);
 
+// «?» — спросить хаб про задачу. Состояние живёт вне DOM: draw() пересоздаёт строки каждые 30 с и на каждый снимок.
+const ASK_HOLD = 60000;
+const asks = new Map();   // ключ → { st: "sending" | "sent" | "fail", at, id, err, cid }
+const askOf = (key) => {
+  const a = asks.get(key);
+  if (a && a.st === "sent" && Date.now() - a.at >= ASK_HOLD) { asks.delete(key); return null; }
+  return a || null;
+};
+
+function askButton(hub, key, snap) {
+  const b = hub.el("button", "jb-chip jb-ask", "?");
+  b.type = "button";
+  const paint = () => {
+    const a = askOf(key);
+    b.classList.toggle("sending", a?.st === "sending");
+    b.classList.toggle("sent", a?.st === "sent");
+    b.classList.toggle("fail", a?.st === "fail");
+    b.disabled = a?.st === "sending" || a?.st === "sent";
+    b.textContent = a?.st === "sending" ? "…" : a?.st === "sent" ? "✓" : "?";
+    b.title = a?.st === "sent" ? `отправлено хабу${a.id ? ` (${a.id})` : ""}`
+      : a?.st === "sending" ? "отправляю…"
+      : a?.st === "fail" ? `не отправлено: ${a.err}. Нажмите ещё раз`
+      : `Спросить хаб: что с задачей ${key}?`;
+    b.setAttribute("aria-label", b.title);
+    if (a?.st === "sent") setTimeout(() => { if (b.isConnected) paint(); }, Math.max(0, ASK_HOLD - (Date.now() - a.at)) + 50);
+  };
+  b.addEventListener("click", async () => {
+    const cur = askOf(key);
+    if (cur && cur.st !== "fail") return;
+    const hubS = snap.sessions.find((s) => s.kind === "hub");
+    if (!hubS || typeof hub.send !== "function") { asks.set(key, { st: "fail", err: "сессия хаба не найдена" }); paint(); return; }
+    // тот же client_id при повторе после «не знаю, дошло ли» — дубля не будет
+    const prev = cur;
+    const cid = prev?.cid || `jira-ask-${key}-${Date.now()}`;
+    asks.set(key, { st: "sending", at: Date.now(), cid });
+    paint();
+    const r = await hub.send({ session: hubS.name, text: `что с задачей ${key}?`, action: true, client_id: cid });
+    if (r.ok) asks.set(key, { st: "sent", at: Date.now(), id: r.data?.id || "" });
+    else {
+      const err = r.error || "нет ответа";
+      asks.set(key, { st: "fail", at: Date.now(), err, cid: r.receipt === "unknown" ? cid : "" });
+      if (hub.capabilities?.banner === 1) hub.banner(`Хаб не принял вопрос по ${key}: ${err}`);
+    }
+    paint();
+  });
+  paint();
+  return b;
+}
+
 function row(hub, key, rec, snap) {
   const is = data.issues[key] || {};
   const [hs, hl, to] = hubState(key, rec, snap, is.category);
@@ -73,7 +122,7 @@ function row(hub, key, rec, snap) {
   }
   const meta = hub.el("div", "jb-meta", [is.assignee && `в Jira: ${is.assignee}`, ago(rec.last)].filter(Boolean).join(" · "));
   tr.append(head, hub.el("div", "jb-chips"), who, meta);
-  tr.querySelector(".jb-chips").append(st, hc);
+  tr.querySelector(".jb-chips").append(st, hc, askButton(hub, is.moved_to || key, snap));
   return { node: tr, hs, cat: is.category || "", inJira: !!data.issues[key], last: rec.last };
 }
 

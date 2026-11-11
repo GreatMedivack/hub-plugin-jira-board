@@ -23,3 +23,8 @@
 .jb-meta { color: var(--muted-foreground); font-size: var(--text-xs); text-align: right; white-space: nowrap; }
 .jb-chip.go { font: inherit; font-size: var(--text-xs); cursor: pointer; }
 .jb-chip.go:hover { filter: brightness(1.15); text-decoration: underline; }
+.jb-ask { font: inherit; font-size: var(--text-xs); cursor: pointer; background: transparent; min-width: 24px; padding: 1px 0; text-align: center; }
+.jb-ask:hover:not(:disabled) { color: var(--foreground); border-color: var(--input); }
+.jb-ask:disabled { cursor: default; }
+.jb-ask.sent { color: var(--success); border-color: var(--success); }
+.jb-ask.fail { color: var(--destructive, #c33); border-color: var(--destructive, #c33); }
