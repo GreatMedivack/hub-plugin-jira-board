@@ -28,3 +28,8 @@
 .jb-ask:disabled { cursor: default; }
 .jb-ask.sent { color: var(--success); border-color: var(--success); }
 .jb-ask.fail { color: var(--destructive, #c33); border-color: var(--destructive, #c33); }
+@media (max-width: 640px) {
+  .jb-row { grid-template-columns: 1fr; }
+  .jb-chips { justify-content: flex-start; flex-wrap: wrap; }
+  .jb-meta { text-align: left; white-space: normal; }
+}
