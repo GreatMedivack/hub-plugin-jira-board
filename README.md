@@ -1,33 +1,40 @@
-# Задачи Jira — плагин Agents Hub
+# Jira tasks: an Agents Hub plugin
 
-Вид «Задачи Jira» в боковой панели хаба: какие задачи Jira сейчас в работе у агентов и какие закончены.
+A "Jira tasks" view in the hub's sidebar: which Jira tasks the agents are working on now and which are done.
 
-- По каждой задаче — номер (ссылка в Jira), заголовок, статус и исполнитель в Jira, когда последний раз упоминалась.
-- Отметка хаба: **в работе** (агент занят ею в этом ходе или по ней открыто поручение), **ждёт вас** (вопрос агента
-  или его «жду владельца» называет задачу), **агенты сдали** (поручения закрыты), **сегодня / тихо**. Нажатие на
-  отметку открывает нужную сессию; кнопки агентов — их сессии.
-- Фильтры «В работе», «Ждут вас», «Закрытые», «Все» и поиск по номеру или слову.
+- For each task: the key (a link to Jira), the summary, the status and assignee in Jira, when it was last mentioned.
+- The hub's mark: **in progress** (an agent is busy with it in this turn, or a hub task about it is open), **waits for
+  you** (an agent's question or its "waiting for the owner" names the task), **agents handed in** (the tasks are
+  closed), **today / quiet**. A click on the mark opens the right session; the agent buttons open their sessions.
+- Filters "In progress", "Waiting for you", "Closed", "All" and a search by key or word.
 
-## Как работает
+## How it works
 
-Процесс плагина (`main.py`) только читает журнал хаба: какие задачи упоминали поручения, сообщения и ходы сессий
-(вывод команд не считается — там номера бывают случайно). **Статусы берёт из Jira через MCP Atlassian (Rovo),
-которое уже подключено к хабу**, — тем же входом, что у сессий; свой токен не нужен. В Jira плагин только читает:
-поиск по JQL и чтение задачи. Задача, переехавшая в другой проект, находится по старому номеру.
-На доске — только задачи, где исполнитель в Jira — вы (`assignee = currentUser()` под вашим входом в Atlassian):
-упомянутые задачи коллег не показываются.
+The plugin process (`main.py`) only reads the hub journal: which tasks the hub's tasks, messages and session turns
+mentioned (command output does not count: keys turn up there by chance). **It takes the statuses from Jira through
+the Atlassian MCP (Rovo) already connected to the hub**, with the same login as the sessions; no token of its own is
+needed. In Jira the plugin only reads: a JQL search and reading a task. A task moved to another project is found by its
+old key.
+The board shows only the tasks whose Jira assignee is you (`assignee = currentUser()` under your Atlassian login):
+your colleagues' tasks that were mentioned are not shown.
 
-Ничего не пишет ни в хаб, ни в Jira. Код хаба не меняет.
+It writes nothing to the hub or to Jira. It does not change the hub code.
 
-## Кнопка «?»
+## The "?" button
 
-На каждой задаче рядом со статусами — кнопка «?»: по нажатию хабу уходит «что с задачей KEY?» как ваше сообщение, ответ — в сессии хаба. После отправки — «✓» на минуту (повторно не спросить случайно); отказ хаба — красная кнопка с причиной в подсказке.
+Each task has a "?" button next to its statuses: a click sends the hub "what is the status of KEY?" as your message,
+and the answer comes in the hub session. After sending it shows "✓" for a minute (so you do not ask twice by accident);
+if the hub refuses, the button turns red with the reason in its tooltip.
 
-## Что нужно
+## Language
 
-- Хаб с API плагинов 1.29 или новее (кнопка «?» шлёт сообщение через `hub.send`).
-- Модуль ссылок на Jira в `hub.json`: `"jira": {"url": "https://<сайт>.atlassian.net", "projects": ["ABC", …]}`.
-- MCP Atlassian в каталоге хаба (`hub.json` → `mcp`, сервер на `mcp.atlassian.com`, например через `mcp-remote`)
-  с выполненным входом. Нет его — вид работает на данных хаба, без статусов Jira.
+The view follows the hub page language: English by default, Russian when the hub page is in Russian.
 
-Код — MIT.
+## Requirements
+
+- A hub with Plugin API 1.29 or newer (the "?" button sends its message with `hub.send`).
+- The Jira links module in `hub.json`: `"jira": {"url": "https://<site>.atlassian.net", "projects": ["ABC", …]}`.
+- The Atlassian MCP in the hub catalog (`hub.json` → `mcp`, a server on `mcp.atlassian.com`, for example through
+  `mcp-remote`) with a completed login. Without it the view works on the hub's data, without Jira statuses.
+
+The code is MIT.

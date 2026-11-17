@@ -1,6 +1,6 @@
-"""Jira через подключение хаба к Atlassian (Rovo MCP): сервер берётся из каталога хаба (hub.json → mcp: тот, что
-ходит на mcp.atlassian.com), вход — тот же, что у сессий (mcp-remote хранит его в ~/.mcp-auth), свой токен не нужен.
-Только чтение: поиск задач по JQL и чтение задачи."""
+"""Jira through the hub's connection to Atlassian (Rovo MCP): the server comes from the hub catalog (hub.json → mcp: the
+one that goes to mcp.atlassian.com), the login is the same as the sessions' (mcp-remote keeps it in ~/.mcp-auth), no
+token of its own is needed. Read only: a JQL search for tasks and reading a task."""
 import json
 import os
 import signal
@@ -8,11 +8,11 @@ import subprocess
 import threading
 import queue
 
-MCP = ["npx", "-y", "mcp-remote", "https://mcp.atlassian.com/v1/mcp"]   # нет в каталоге — как в README Atlassian
+MCP = ["npx", "-y", "mcp-remote", "https://mcp.atlassian.com/v1/mcp"]   # not in the catalog: as in the Atlassian README
 
 
 def server(cfg):
-    """Команда и окружение сервера Atlassian из каталога хаба: stdio-сервер, в args которого mcp.atlassian.com."""
+    """The command and environment of the Atlassian server from the hub catalog: a stdio server with mcp.atlassian.com in its args."""
     for m in (cfg.get("mcp") or {}).values():
         srv = m.get("server") or {}
         if srv.get("command") and any("mcp.atlassian.com" in str(a) for a in srv.get("args") or []):
@@ -23,8 +23,8 @@ def server(cfg):
 class Rovo:
     def __init__(self, cfg, timeout=60):
         cmd, env = server(cfg)
-        # свой process group: npx поднимает mcp-remote отдельным процессом (node) — закрыть надо всю группу, иначе он
-        # переживает закрытие npx и остаётся сиротой
+        # its own process group: npx starts mcp-remote as a separate process (node), so the whole group must be closed,
+        # otherwise it outlives npx and stays an orphan
         self.p = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
                                   text=True, env={**os.environ, **env}, start_new_session=True)
         self.q, self.n, self.timeout = queue.Queue(), 0, timeout
@@ -51,7 +51,7 @@ class Rovo:
             msg = self.q.get(timeout=self.timeout)
             if msg.get("id") == self.n:
                 if "error" in msg:
-                    raise RuntimeError(msg["error"].get("message", "ошибка MCP")[:200])
+                    raise RuntimeError(msg["error"].get("message", "MCP error")[:200])
                 return msg["result"]
 
     def tool(self, name, args):

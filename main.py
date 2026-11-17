@@ -1,6 +1,7 @@
-"""Процесс плагина «Задачи Jira»: читает журнал хаба (только чтение), собирает, какие задачи Jira упоминали сессии и
-поручения, и раз в несколько минут спрашивает у Jira статус, заголовок и исполнителя — через подключение хаба к
-Atlassian (вход владельца, rovo.py), только поиском. Итог — web/data.json для вида; Jira недоступна — вид на данных хаба.
+"""The process of the "Jira tasks" plugin: reads the hub journal (read only), collects which Jira tasks the sessions and
+tasks mentioned, and every few minutes asks Jira for the status, summary and assignee through the hub's connection to
+Atlassian (the owner's login, rovo.py), by search only. The result is web/data.json for the view; with Jira unavailable
+the view works on the hub's data.
 """
 import json
 import os
@@ -13,19 +14,19 @@ from core import catalog
 HERE = os.path.dirname(os.path.abspath(__file__))
 STATE_DIR = os.environ.get("HUB_STATE_DIR") or open(os.path.join(catalog.config_dir(), "state-dir")).read().strip()
 JOURNAL = os.path.join(STATE_DIR, "journal.jsonl")
-# индекс — вне папки плагина: хаб считает версию страницы по всем файлам расширения и перезагружает вкладку, когда она
-# меняется (владелец 06.10: «браузер постоянно моргает» — файлы плагина менялись каждые 20 с)
+# the index lives outside the plugin folder: the hub computes the page version from all the extension's files and
+# reloads the tab when it changes (the browser kept flickering while the plugin's files changed every 20 s)
 INDEX = os.path.join(STATE_DIR, "jira-board", "index.json")
 OUT = os.path.join(HERE, "web", "data.json")
 EVERY, JIRA_EVERY = 20, 300
-# не упоминание задачи: служебное ядра и вывод команд (там номера бывают случайно — grep, отчёты, списки)
+# not a mention of a task: the core's service events and command output (keys turn up there by chance: grep, reports, lists)
 SKIP = ("catalog.loaded", "session.info", "account.limits", "owner.", "news.", "core.", "tools.", "turn.started",
         "host.", "session.recap", "watch.", "turn.tool_result", "task.noted")
 
 
-# web/data.json отдаётся странице только из папки плагина, а версия страницы — размер и время файлов там. Поэтому файл
-# всегда одного размера (добивается пробелами, растёт ступенями) и с одним временем: для хаба он не меняется, а вид
-# читает его свежим (?t= в адресе). Новая ступень размера — одна перезагрузка вкладок.
+# web/data.json is served to the page only from the plugin folder, and the page version is the size and time of the
+# files there. So the file always has one size (padded with spaces, growing in steps) and one time: for the hub it does
+# not change, while the view reads it fresh (?t= in the address). A new size step means one reload of the tabs.
 FIXED_MTIME = 1_000_000_000
 STEP = 256 << 10
 
@@ -55,13 +56,13 @@ def key_re(projects):
 
 
 def scan(idx, rx):
-    """Новые строки журнала → упоминания задач: кто (сессия), когда, в каком поручении. Журнал сменился — заново."""
+    """New journal lines → task mentions: who (the session), when, in which task. A new journal: start over."""
     try:
         with open(JOURNAL, "rb") as f:
             head = f.readline()
             size = f.seek(0, 2)
             if head != (idx.get("first") or "").encode() or size < idx["offset"]:
-                idx.update(offset=0, first=head.decode(errors="replace"), keys={}, sessions=[])   # moved — оставить
+                idx.update(offset=0, first=head.decode(errors="replace"), keys={}, sessions=[])   # moved: keep
             f.seek(idx["offset"])
             chunk = f.read()
     except FileNotFoundError:
@@ -104,9 +105,9 @@ def issue(it):
 
 
 def jira(keys, cloud, moved, cfg):
-    """Статус, заголовок, исполнитель — через подключение хаба к Atlassian (rovo.py), только чтение: поиск по JQL.
-    Задача, переехавшая в другой проект, по старому номеру в поиске не находится — её читаем по номеру (getJiraIssue)
-    и запоминаем новый номер в moved."""
+    """Status, summary, assignee through the hub's connection to Atlassian (rovo.py), read only: a JQL search.
+    A task moved to another project is not found by its old key in a search: it is read by key (getJiraIssue) and its
+    new key is remembered in moved."""
     from rovo import Rovo
     fields = ["summary", "status", "assignee", "issuetype"]
     out, r = {}, None
@@ -124,11 +125,11 @@ def jira(keys, cloud, moved, cfg):
             try:
                 it = r.tool("getJiraIssue", {"cloudId": cloud, "issueIdOrKey": k, "fields": fields})
             except RuntimeError:
-                continue   # нет такой задачи — случайное совпадение номера
+                continue   # no such task: a chance match of a key
             moved[k] = it["key"]
             out[it["key"]] = issue(it)
-        # чьи: только задачи владельца (владелец 10.10, q71817: «только мои задачи») — тот же поиск с assignee =
-        # currentUser(): вход в Atlassian — его
+        # whose: only the owner's tasks, by the same search with assignee = currentUser(): the Atlassian login is the
+        # owner's
         found = sorted(out)
         for i in range(0, len(found), 100):
             res = r.tool("searchJiraIssuesUsingJql", {"cloudId": cloud, "jql": "key in (%s) AND assignee = currentUser()"
@@ -140,15 +141,15 @@ def jira(keys, cloud, moved, cfg):
             if k in keys and new in out and k != new:
                 out[k] = {**out[new], "moved_to": new}
         return out, None
-    except Exception as e:  # noqa: BLE001 — Jira недоступна: вид остаётся на данных хаба
-        return None, f"Jira недоступна: {str(e)[:120] or e.__class__.__name__}"
+    except Exception as e:  # noqa: BLE001 — Jira unavailable: the view stays on the hub's data
+        return None, f"Jira unavailable: {str(e)[:120] or e.__class__.__name__}"
     finally:
         if r:
             r.close()
 
 
 def only_mine(issues, keys):
-    """На доске — только задачи владельца (исполнитель в Jira — он). Jira ещё не ответила — пусто, а не все подряд."""
+    """The board shows only the owner's tasks (the Jira assignee is the owner). Before Jira answers: empty, not everything."""
     mine = {k: v for k, v in issues.items() if v.get("mine")}
     return {"issues": mine, "keys": {k: v for k, v in keys.items() if k in mine}}
 
@@ -177,7 +178,7 @@ def main():
         if url and idx["keys"] and time.time() - jira_at > JIRA_EVERY:
             cloud = cloud_id(url)
             got, err = jira(sorted(idx["keys"]), cloud, idx.setdefault("moved", {}), full) if cloud else \
-                (None, "не узнать cloudId сайта Jira")
+                (None, "cannot get the cloudId of the Jira site")
             write(INDEX, idx)
             jira_at = time.time()
             if got is not None:
